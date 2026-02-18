@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, unquote
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -226,6 +226,53 @@ def add_spot(body: AddSpotRequest, db: Session = Depends(get_db)):
             )
 
     return AddSpotResponse()
+
+
+# --- Админ: одобрить/отклонить точку (вызывает бот, БД на Render) ---
+
+def verify_bot_token(authorization: str = Header(None)) -> None:
+    """Проверка, что запрос от бота: Authorization: Bearer <BOT_TOKEN>."""
+    if not BOT_TOKEN:
+        raise HTTPException(status_code=503, detail="Сервер не настроен")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Требуется авторизация бота")
+    token = authorization[7:].strip()
+    if token != BOT_TOKEN:
+        raise HTTPException(status_code=403, detail="Неверный токен")
+
+
+@app.post("/api/admin/approve_spot")
+def admin_approve_spot(
+    spot_id: int = Query(..., description="ID точки"),
+    _: None = Depends(verify_bot_token),
+    db: Session = Depends(get_db),
+):
+    """Одобрить точку: is_active=True, автору +40 руб. Вызывается ботом при нажатии «Одобрить»."""
+    spot = db.query(Spot).filter(Spot.id == spot_id).first()
+    if not spot:
+        raise HTTPException(status_code=404, detail="Точка не найдена")
+    spot.is_active = True
+    if spot.author_id:
+        user = db.query(User).filter(User.tg_id == spot.author_id).first()
+        if user:
+            user.balance = (user.balance or 0) + 40
+    db.commit()
+    return {"ok": True, "message": "Одобрено"}
+
+
+@app.post("/api/admin/reject_spot")
+def admin_reject_spot(
+    spot_id: int = Query(..., description="ID точки"),
+    _: None = Depends(verify_bot_token),
+    db: Session = Depends(get_db),
+):
+    """Отклонить точку: удалить из БД. Вызывается ботом при нажатии «Отклонить»."""
+    spot = db.query(Spot).filter(Spot.id == spot_id).first()
+    if not spot:
+        raise HTTPException(status_code=404, detail="Точка не найдена")
+    db.delete(spot)
+    db.commit()
+    return {"ok": True, "message": "Отклонено"}
 
 
 # --- Раздача статики Mini App (HTML, CSS, JS) ---
