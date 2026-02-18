@@ -6,47 +6,55 @@
   <title>RoofNN — Путеводитель по крышам Нижнего Новгорода</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/style.css" />
-  <!--
-    ВАЖНО ПРО NETLIFY/СТАТИКУ:
-    Если Mini App лежит на Netlify, а API (FastAPI) — на другом домене, укажите базовый URL API здесь.
-    Пример: window.ROOFNN_API_BASE = "https://roofnn-api.example.com";
-    Если оставить пустым, фронт будет обращаться к /api/* на этом же домене.
-  -->
   <script>
-    window.ROOFNN_API_BASE = "";
+    window.ROOFNN_API_BASE = "https://roofnn.onrender.com";
   </script>
-
-  <!-- Telegram Web App (initData). В Telegram-webview объект window.Telegram.WebApp будет доступен. -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div id="map"></div>
+  <header class="header">
+    <h1 class="header__title">RoofNN</h1>
+    <p class="header__subtitle">Крыши Нижнего Новгорода</p>
+    <nav class="nav">
+      <button type="button" id="nav-map" class="nav__btn nav__btn--active">Карта</button>
+      <button type="button" id="nav-add" class="nav__btn">Добавить точку</button>
+    </nav>
+  </header>
 
-  <!-- Карточка выбранной точки: описание и кнопка «Открыть тутор» -->
-  <div id="spot-card" class="spot-card hidden">
-    <h2 id="spot-title" class="spot-card__title"></h2>
-    <p id="spot-coords" class="spot-card__coords"></p>
-    <button type="button" id="btn-open-tutor" class="btn btn--primary">
-      Открыть тутор
-    </button>
-    <p id="spot-error" class="spot-card__error hidden"></p>
-  </div>
+  <main class="main">
+    <div id="map" class="map"></div>
 
-  <!-- Кнопка «Моё местоположение» -->
-  <button type="button" id="btn-geolocate" class="btn-geolocate" title="Моё местоположение">
-    📍
-  </button>
+    <section id="add-section" class="add-section hidden">
+      <div class="add-section__inner">
+        <h2>Добавить точку</h2>
+        <p class="add-section__hint">Туториал о пролазе оформи в <a href="https://telegra.ph" target="_blank" rel="noopener">Telegraph</a>, затем вставь ссылку сюда.</p>
+        <label class="label">Название точки</label>
+        <input type="text" id="add-title" class="input" placeholder="Например: Крыша на ул. Рождественская" maxlength="200" />
+        <label class="label">Ссылка на туториал (Telegraph)</label>
+        <input type="url" id="add-telegraph" class="input" placeholder="https://telegra.ph/..." />
+        <p class="add-section__coords">Координаты: <span id="add-coords">— выберите место на карте</span></p>
+        <p class="add-section__coords-hint">Переключитесь на «Карта», нажмите на карту в нужном месте, затем снова «Добавить точку».</p>
+        <div class="add-section__actions">
+          <button type="button" id="btn-add-spot" class="btn btn--primary">Отправить на модерацию</button>
+          <button type="button" id="btn-close-add" class="btn btn--secondary">Закрыть</button>
+        </div>
+        <p id="add-spot-error" class="error-msg hidden"></p>
+      </div>
+    </section>
 
-  <!-- Форма добавления новой точки (по желанию можно вызвать из меню) -->
-  <div id="add-spot-panel" class="add-panel hidden">
-    <h3>Добавить точку</h3>
-    <input type="text" id="add-title" placeholder="Название" />
-    <input type="text" id="add-telegraph" placeholder="Ссылка на Telegraph" />
-    <p class="add-panel__coords">Координаты: <span id="add-coords">—</span></p>
-    <button type="button" id="btn-add-spot" class="btn btn--primary">Отправить на модерацию</button>
-    <button type="button" id="btn-close-add" class="btn btn--secondary">Закрыть</button>
-  </div>
-  <button type="button" id="btn-show-add" class="btn-add-toggle" title="Добавить точку">+</button>
+    <div id="spot-card" class="spot-card hidden">
+      <h2 id="spot-title" class="spot-card__title"></h2>
+      <p id="spot-coords" class="spot-card__coords"></p>
+      <button type="button" id="btn-open-tutor" class="btn btn--primary btn--block">
+        Открыть туториал на Telegraph
+      </button>
+      <p id="spot-error" class="error-msg hidden"></p>
+    </div>
+
+    <button type="button" id="btn-geolocate" class="btn-geolocate" title="Моё местоположение" aria-label="Моё местоположение">📍</button>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/script.js"></script>

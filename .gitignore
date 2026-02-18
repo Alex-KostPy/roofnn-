@@ -1,0 +1,22 @@
+# Секреты и локальная БД
+.env
+*.db
+roofnn.db
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+*.log
+temp/
+tmp/

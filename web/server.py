@@ -21,8 +21,8 @@ load_dotenv()
 from database import get_db, init_db, Spot, User, SessionLocal
 from models import SpotPublic, BuySpotRequest, BuySpotResponse, AddSpotRequest, AddSpotResponse
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = os.environ.get("ADMIN_ID", "")
+BOT_TOKEN = (os.environ.get("BOT_TOKEN", "") or "").strip()
+ADMIN_ID = (os.environ.get("ADMIN_ID", "") or "").strip()
 SPOT_PRICE = 20
 
 app = FastAPI(title="RoofNN API", description="API для Mini App «Путеводитель по крышам НН»")
@@ -85,6 +85,12 @@ def startup():
 
 # --- Эндпоинты ---
 
+@app.get("/api/health")
+def health():
+    """Проверка доступности API (для холодного старта Render и т.п.)."""
+    return {"status": "ok"}
+
+
 @app.get("/api/spots", response_model=list[SpotPublic])
 def list_spots(db: Session = Depends(get_db)):
     """
@@ -135,23 +141,53 @@ def buy_spot(body: BuySpotRequest, db: Session = Depends(get_db)):
     )
 
 
+def _normalize_telegraph_url(url: str) -> str:
+    """Приводит ссылку на Telegraph к виду https://telegra.ph/..."""
+    url = (url or "").strip()
+    if not url:
+        return ""
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    return url
+
+
 @app.post("/api/add_spot", response_model=AddSpotResponse)
 def add_spot(body: AddSpotRequest, db: Session = Depends(get_db)):
     """
     Добавить новую точку. Сохраняется с is_active=False.
     Админу в Telegram уходит уведомление с кнопками «Одобрить» / «Отклонить».
     """
-    if not validate_init_data(body.init_data, BOT_TOKEN):
-        raise HTTPException(status_code=401, detail="Неверные данные авторизации")
+    init_data = (body.init_data or "").strip()
+    if not init_data:
+        raise HTTPException(
+            status_code=401,
+            detail="Откройте приложение из бота в Telegram — без этого нельзя добавить точку.",
+        )
+    if not validate_init_data(init_data, BOT_TOKEN):
+        raise HTTPException(
+            status_code=401,
+            detail="Неверная авторизация. Откройте карту из бота в Telegram и попробуйте снова.",
+        )
 
-    user_data = get_tg_user_from_init_data(body.init_data)
+    user_data = get_tg_user_from_init_data(init_data)
     tg_id = user_data["id"] if user_data else None
 
+    title = (body.title or "").strip()
+    if not title or len(title) > 200:
+        raise HTTPException(status_code=400, detail="Название точки: от 1 до 200 символов.")
+
+    telegraph_url = _normalize_telegraph_url(body.telegraph_url)
+    if not telegraph_url or "telegra.ph" not in telegraph_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Укажите ссылку на статью в Telegraph (например https://telegra.ph/...)",
+        )
+
     spot = Spot(
-        title=body.title,
+        title=title,
         lat=body.lat,
         lon=body.lon,
-        telegraph_url=body.telegraph_url,
+        telegraph_url=telegraph_url,
         price=SPOT_PRICE,
         author_id=tg_id,
         is_active=False,
