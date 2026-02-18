@@ -1,17 +1,29 @@
 """
 Pydantic-схемы для обмена данными между фронтендом Mini App и бэкендом (FastAPI).
 """
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
 # --- Ответы API ---
 
 class SpotPublic(BaseModel):
-    """Точка для карты: только координаты и ID (без Telegraph-ссылки)."""
+    """Точка для карты: id, название, координаты, автор (ник)."""
     id: int
     title: str
     lat: float
     lon: float
+    author_username: Optional[str] = None
+
+
+class MeResponse(BaseModel):
+    """Профиль пользователя: баланс, попытки, ник, список ID своих точек."""
+    balance: float
+    free_attempts: int
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    my_spot_ids: list[int]
 
 
 class BuySpotRequest(BaseModel):
@@ -39,3 +51,14 @@ class AddSpotResponse(BaseModel):
     """Ответ после добавления точки (ожидает модерации)."""
     success: bool = True
     message: str = "Точка отправлена на модерацию. После одобрения она появится на карте."
+
+
+class MeRequest(BaseModel):
+    """Запрос профиля: передаём initData из Telegram."""
+    init_data: str = Field(..., description="Telegram WebApp initData")
+
+
+class AddBalanceRequest(BaseModel):
+    """Запрос админа: начислить баланс пользователю по tg_id."""
+    tg_id: int
+    amount: float = Field(..., gt=0, le=100000)

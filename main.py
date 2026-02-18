@@ -86,6 +86,36 @@ async def callback_approve_spot(callback: CallbackQuery) -> None:
         await callback.answer("Сервер недоступен. Подождите и попробуйте снова.", show_alert=True)
 
 
+@dp.message(F.text.startswith("/add_balance"))
+async def cmd_add_balance(message: Message) -> None:
+    """Админ: пополнить баланс пользователю. Использование: /add_balance <tg_id> <сумма>"""
+    if message.from_user.id != ADMIN_ID:
+        return
+    import re
+    m = re.match(r"^/add_balance\s+(\d+)\s+([\d.]+)\s*$", (message.text or "").strip())
+    if not m:
+        await message.answer("Использование: /add_balance <tg_id> <сумма>")
+        return
+    tg_id = int(m.group(1))
+    amount = float(m.group(2))
+    if amount <= 0 or amount > 100000:
+        await message.answer("Сумма от 0.01 до 100000.")
+        return
+    url = f"{API_BASE}/api/admin/add_balance"
+    headers = {"Authorization": f"Bearer {BOT_TOKEN}", "Content-Type": "application/json"}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(url, json={"tg_id": tg_id, "amount": amount}, headers=headers)
+        if r.status_code >= 400:
+            await message.answer("Ошибка API: " + (r.json().get("detail", "неизвестно") if r.headers.get("content-type", "").startswith("application/json") else str(r.status_code)))
+            return
+        data = r.json()
+        await message.answer(f"✅ Пользователю {tg_id} начислено {amount} ₽. Новый баланс: {data.get('balance', '?')} ₽.")
+    except Exception as e:
+        logger.exception("add_balance failed")
+        await message.answer("Сервер недоступен.")
+
+
 @dp.callback_query(F.data.startswith("reject_"))
 async def callback_reject_spot(callback: CallbackQuery) -> None:
     """Админ нажал «Отклонить»: дергаем API на Render."""

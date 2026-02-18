@@ -1,6 +1,6 @@
 /**
  * RoofNN Mini App — карта крыш Нижнего Новгорода.
- * Туториалы хранятся в Telegraph; открытие — по кнопке после списания 20 ₽ или 1 бесплатной попытки.
+ * Профиль (баланс, пополнение), список точек с автором, свои туторы — бесплатно.
  */
 (() => {
   "use strict";
@@ -20,16 +20,20 @@
   let map = null;
   let addSpotLatLng = null;
   let spots = [];
+  let profile = { balance: 0, free_attempts: 0, my_spot_ids: [] };
   const boughtSpots = {};
 
-  const $header = document.querySelector(".header");
-  const $main = document.querySelector(".main");
   const $mapEl = document.getElementById("map");
+  const $listSection = document.getElementById("list-section");
+  const $profileSection = document.getElementById("profile-section");
   const $addSection = document.getElementById("add-section");
   const $navMap = document.getElementById("nav-map");
+  const $navList = document.getElementById("nav-list");
   const $navAdd = document.getElementById("nav-add");
+  const $navProfile = document.getElementById("nav-profile");
   const $spotCard = document.getElementById("spot-card");
   const $spotTitle = document.getElementById("spot-title");
+  const $spotAuthor = document.getElementById("spot-author");
   const $spotCoords = document.getElementById("spot-coords");
   const $btnOpenTutor = document.getElementById("btn-open-tutor");
   const $spotError = document.getElementById("spot-error");
@@ -40,6 +44,9 @@
   const $btnAddSpot = document.getElementById("btn-add-spot");
   const $btnCloseAdd = document.getElementById("btn-close-add");
   const $addSpotError = document.getElementById("add-spot-error");
+  const $spotList = document.getElementById("spot-list");
+  const $profileBalance = document.getElementById("profile-balance");
+  const $profileAttempts = document.getElementById("profile-attempts");
   const $toast = document.getElementById("toast");
 
   function showToast(message) {
@@ -51,6 +58,24 @@
 
   function getInitData() {
     return (tg && tg.initData) || "";
+  }
+
+  async function loadProfile() {
+    const initData = getInitData();
+    if (!initData) return;
+    try {
+      const res = await fetch(apiUrl("/api/me"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ init_data: initData }),
+      });
+      if (!res.ok) return;
+      profile = await res.json();
+      if ($profileBalance) $profileBalance.textContent = profile.balance;
+      if ($profileAttempts) $profileAttempts.textContent = profile.free_attempts;
+    } catch (e) {
+      console.error("loadProfile", e);
+    }
   }
 
   async function loadSpots(retriesLeft = 1) {
@@ -83,37 +108,34 @@
     return data.telegraph_url;
   }
 
-  function renderMarkers() {
-    if (!map) return;
-    if (window.markersLayer) map.removeLayer(window.markersLayer);
-    const layer = L.layerGroup();
-    spots.forEach((spot) => {
-      const marker = L.marker([spot.lat, spot.lon]).bindPopup(
-        "<b>" + escapeHtml(spot.title) + "</b><br>Нажми на карточку внизу, чтобы открыть туториал на Telegraph."
-      );
-      marker.on("click", () => selectSpot(spot.id, spot.title, spot.lat, spot.lon));
-      layer.addLayer(marker);
-    });
-    layer.addTo(map);
-    window.markersLayer = layer;
-  }
-
   function escapeHtml(s) {
     const div = document.createElement("div");
     div.textContent = s;
     return div.innerHTML;
   }
 
-  function selectSpot(id, title, lat, lon) {
+  function isMySpot(spotId) {
+    return profile.my_spot_ids && profile.my_spot_ids.indexOf(spotId) !== -1;
+  }
+
+  function selectSpot(spot) {
+    const id = spot.id;
+    const isMine = isMySpot(id);
     $spotCard.classList.remove("hidden");
     $spotError.classList.add("hidden");
     $spotError.textContent = "";
-    $spotTitle.textContent = title;
-    $spotCoords.textContent = "Координаты: " + lat.toFixed(5) + ", " + lon.toFixed(5);
+    $spotTitle.textContent = spot.title;
+    $spotAuthor.textContent = spot.author_username ? "Туториал от " + spot.author_username : "";
+    $spotAuthor.classList.toggle("hidden", !spot.author_username);
+    $spotCoords.textContent = "Координаты: " + spot.lat.toFixed(5) + ", " + spot.lon.toFixed(5);
     $btnOpenTutor.dataset.spotId = String(id);
-    $btnOpenTutor.textContent = boughtSpots[id]
-      ? "Открыть туториал на Telegraph"
-      : "Открыть туториал (20 ₽ или 1 бесплатная попытка)";
+    if (boughtSpots[id]) {
+      $btnOpenTutor.textContent = "Открыть туториал на Telegraph";
+    } else if (isMine) {
+      $btnOpenTutor.textContent = "Открыть свой тутор (бесплатно)";
+    } else {
+      $btnOpenTutor.textContent = "Открыть туториал (20 ₽ или 1 бесплатная попытка)";
+    }
   }
 
   async function onOpenTutorClick() {
@@ -137,13 +159,58 @@
     $btnOpenTutor.disabled = false;
   }
 
+  function renderMarkers() {
+    if (!map) return;
+    if (window.markersLayer) map.removeLayer(window.markersLayer);
+    const layer = L.layerGroup();
+    spots.forEach((spot) => {
+      const authorLine = spot.author_username ? " · " + spot.author_username : "";
+      const marker = L.marker([spot.lat, spot.lon]).bindPopup(
+        "<b>" + escapeHtml(spot.title) + "</b>" + escapeHtml(authorLine) + "<br>Нажми на карточку внизу."
+      );
+      marker.on("click", () => selectSpot(spot));
+      layer.addLayer(marker);
+    });
+    layer.addTo(map);
+    window.markersLayer = layer;
+  }
+
+  function renderList() {
+    if (!$spotList) return;
+    $spotList.innerHTML = "";
+    spots.forEach((spot) => {
+      const li = document.createElement("li");
+      li.className = "spot-list__item";
+      const isMine = isMySpot(spot.id);
+      const author = spot.author_username ? " · " + spot.author_username : "";
+      li.innerHTML =
+        "<span class=\"spot-list__title\">" + escapeHtml(spot.title) + "</span>" +
+        (author ? "<span class=\"spot-list__author\">" + escapeHtml(spot.author_username) + "</span>" : "") +
+        (isMine ? "<span class=\"spot-list__badge\">Ваш</span>" : "");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn--small btn--primary";
+      btn.textContent = isMine ? "Открыть" : "Открыть (20 ₽)";
+      btn.addEventListener("click", () => selectSpot(spot));
+      li.appendChild(btn);
+      $spotList.appendChild(li);
+    });
+  }
+
   function showView(view) {
-    const isMap = view === "map";
-    $addSection.classList.toggle("hidden", isMap);
-    $mapEl.classList.toggle("hidden", !isMap);
-    $navMap.classList.toggle("nav__btn--active", isMap);
-    $navAdd.classList.toggle("nav__btn--active", !isMap);
-    if (map && isMap) map.invalidateSize();
+    const views = ["map", "list", "add", "profile"];
+    views.forEach((v) => {
+      const isActive = v === view;
+      if (v === "map") {
+        $mapEl.classList.toggle("hidden", !isActive);
+        if (map && isActive) map.invalidateSize();
+      }
+      if (v === "list") $listSection.classList.toggle("hidden", !isActive);
+      if (v === "add") $addSection.classList.toggle("hidden", !isActive);
+      if (v === "profile") $profileSection.classList.toggle("hidden", !isActive);
+      const nav = document.getElementById("nav-" + (v === "map" ? "map" : v === "list" ? "list" : v === "add" ? "add" : "profile"));
+      if (nav) nav.classList.toggle("nav__btn--active", isActive);
+    });
   }
 
   function initMap() {
@@ -151,7 +218,6 @@
       showToast("Ошибка загрузки карты. Проверьте интернет.");
       return;
     }
-
     map = L.map("map", { center: NIZHNY_CENTER, zoom: DEFAULT_ZOOM });
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OpenStreetMap &copy; CARTO",
@@ -183,7 +249,13 @@
     $btnOpenTutor.addEventListener("click", onOpenTutorClick);
 
     $navMap.addEventListener("click", () => showView("map"));
+    $navList.addEventListener("click", () => showView("list"));
     $navAdd.addEventListener("click", () => showView("add"));
+    $navProfile.addEventListener("click", () => {
+      showView("profile");
+      $profileBalance.textContent = profile.balance;
+      $profileAttempts.textContent = profile.free_attempts;
+    });
 
     $btnCloseAdd.addEventListener("click", () => showView("map"));
 
@@ -210,14 +282,14 @@
         return;
       }
       if (!addSpotLatLng) {
-        $addSpotError.textContent = "Выберите место на карте: переключитесь на «Карта», нажмите на карту, затем снова «Добавить точку».";
+        $addSpotError.textContent = "Выберите место на карте: «Карта» → клик по карте → снова «Добавить».";
         $addSpotError.classList.remove("hidden");
         return;
       }
 
       const initData = getInitData();
       if (!initData) {
-        showToast("Откройте приложение из бота в Telegram — так можно добавлять точки.");
+        showToast("Откройте приложение из бота в Telegram.");
         return;
       }
 
@@ -236,12 +308,13 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail || "Ошибка отправки");
-        showToast("Точка отправлена на модерацию. После одобрения появится на карте.");
+        showToast("Точка отправлена на модерацию.");
         $addTitle.value = "";
         $addTelegraph.value = "";
         $addCoords.textContent = "— выберите место на карте";
         addSpotLatLng = null;
         showView("map");
+        loadProfile();
       } catch (e) {
         $addSpotError.textContent = e.message || "Ошибка при отправке.";
         $addSpotError.classList.remove("hidden");
@@ -249,7 +322,12 @@
       $btnAddSpot.disabled = false;
     });
 
-    loadSpots().then(renderMarkers);
+    Promise.all([loadProfile(), loadSpots()]).then(() => {
+      renderMarkers();
+      renderList();
+      $profileBalance.textContent = profile.balance;
+      $profileAttempts.textContent = profile.free_attempts;
+    });
   }
 
   initMap();

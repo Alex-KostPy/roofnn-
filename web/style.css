@@ -8,7 +8,7 @@
   --text: #e8e8ea;
   --text-muted: #888;
   --error: #e57373;
-  --header-h: 120px;
+  --header-h: 96px;
 }
 
 * {
@@ -25,46 +25,52 @@ body {
   overflow-x: hidden;
 }
 
-/* Шапка и меню */
+/* Шапка и меню — компактно, все кнопки в один ряд на телефоне */
 .header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 12px 16px 10px;
+  padding: 6px 10px 8px;
   background: var(--surface);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .header__title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .header__subtitle {
-  margin: 2px 0 10px;
-  font-size: 0.8rem;
+  margin: 0 0 6px;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 
 .nav {
   display: flex;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: space-between;
+  min-width: 0;
 }
 
 .nav__btn {
-  padding: 8px 16px;
-  font-size: 0.9rem;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 6px;
+  font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
 }
 
 .nav__btn:hover {
@@ -95,6 +101,102 @@ body {
 
 .map.hidden {
   display: none;
+}
+
+/* Секция «Список» */
+.list-section {
+  position: relative;
+  z-index: 10;
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.list-section.hidden {
+  display: none;
+}
+
+.list-section__inner h2 {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.spot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.spot-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spot-list__item:last-child {
+  border-bottom: none;
+}
+
+.spot-list__title {
+  font-weight: 600;
+  flex: 1 1 100%;
+}
+
+.spot-list__author {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex: 1 1 100%;
+}
+
+.spot-list__badge {
+  font-size: 0.75rem;
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.btn--small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* Секция «Профиль» */
+.profile-section {
+  position: relative;
+  z-index: 10;
+  padding: 20px 16px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.profile-section.hidden {
+  display: none;
+}
+
+.profile-section__inner h2 {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.profile-row {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.profile-topup {
+  margin: 20px 0 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 /* Секция «Добавить точку» */
@@ -194,9 +296,19 @@ body {
 }
 
 .spot-card__title {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-size: 1.1rem;
   color: var(--text);
+}
+
+.spot-card__author {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.spot-card__author.hidden {
+  display: none;
 }
 
 .spot-card__coords {

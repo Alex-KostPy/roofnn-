@@ -17,23 +17,43 @@
     <p class="header__subtitle">Крыши Нижнего Новгорода</p>
     <nav class="nav">
       <button type="button" id="nav-map" class="nav__btn nav__btn--active">Карта</button>
-      <button type="button" id="nav-add" class="nav__btn">Добавить точку</button>
+      <button type="button" id="nav-list" class="nav__btn">Список</button>
+      <button type="button" id="nav-add" class="nav__btn">Добавить</button>
+      <button type="button" id="nav-profile" class="nav__btn">Профиль</button>
     </nav>
   </header>
 
   <main class="main">
     <div id="map" class="map"></div>
 
+    <section id="list-section" class="list-section hidden">
+      <div class="list-section__inner">
+        <h2>Все точки</h2>
+        <ul id="spot-list" class="spot-list"></ul>
+      </div>
+    </section>
+
+    <section id="profile-section" class="profile-section hidden">
+      <div class="profile-section__inner">
+        <h2>Профиль</h2>
+        <p class="profile-row"><strong>Баланс:</strong> <span id="profile-balance">—</span> ₽</p>
+        <p class="profile-row"><strong>Бесплатные попытки:</strong> <span id="profile-attempts">—</span></p>
+        <p class="profile-topup" id="profile-topup">
+          Чтобы пополнить баланс, напишите в Telegram: <a href="https://t.me/kostrov_s" target="_blank" rel="noopener">@kostrov_s</a>
+        </p>
+      </div>
+    </section>
+
     <section id="add-section" class="add-section hidden">
       <div class="add-section__inner">
         <h2>Добавить точку</h2>
-        <p class="add-section__hint">Туториал о пролазе оформи в <a href="https://telegra.ph" target="_blank" rel="noopener">Telegraph</a>, затем вставь ссылку сюда.</p>
+        <p class="add-section__hint">Сделай туториал с фото (Telegraph, Imgur-альбом или любая ссылка) и вставь сюда.</p>
         <label class="label">Название точки</label>
         <input type="text" id="add-title" class="input" placeholder="Например: Крыша на ул. Рождественская" maxlength="200" />
-        <label class="label">Ссылка на туториал (Telegraph)</label>
-        <input type="url" id="add-telegraph" class="input" placeholder="https://telegra.ph/..." />
+        <label class="label">Ссылка на туториал</label>
+        <input type="url" id="add-telegraph" class="input" placeholder="https://telegra.ph/... или https://imgur.com/..." />
         <p class="add-section__coords">Координаты: <span id="add-coords">— выберите место на карте</span></p>
-        <p class="add-section__coords-hint">Переключитесь на «Карта», нажмите на карту в нужном месте, затем снова «Добавить точку».</p>
+        <p class="add-section__coords-hint">Переключитесь на «Карта», нажмите на карту в нужном месте, затем снова «Добавить».</p>
         <div class="add-section__actions">
           <button type="button" id="btn-add-spot" class="btn btn--primary">Отправить на модерацию</button>
           <button type="button" id="btn-close-add" class="btn btn--secondary">Закрыть</button>
@@ -44,6 +64,7 @@
 
     <div id="spot-card" class="spot-card hidden">
       <h2 id="spot-title" class="spot-card__title"></h2>
+      <p id="spot-author" class="spot-card__author"></p>
       <p id="spot-coords" class="spot-card__coords"></p>
       <button type="button" id="btn-open-tutor" class="btn btn--primary btn--block">
         Открыть туториал на Telegraph
