@@ -1,0 +1,208 @@
+/* RoofNN — неоновый тёмный стиль, акцент #00ffcc */
+
+:root {
+  --bg: #0a0a0b;
+  --surface: #121214;
+  --accent: #00ffcc;
+  --accent-dim: rgba(0, 255, 204, 0.6);
+  --text: #e4e4e7;
+  --text-muted: #71717a;
+  --error: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+/* Карта на весь экран */
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Карточка точки: неоновая рамка и тень */
+.spot-card {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 0 20px var(--accent-dim);
+  z-index: 1000;
+}
+
+.spot-card.hidden {
+  display: none;
+}
+
+.spot-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+.spot-card__coords {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.spot-card__error {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--error);
+}
+
+.spot-card__error.hidden {
+  display: none;
+}
+
+/* Кнопки */
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn--primary:hover {
+  box-shadow: 0 0 16px var(--accent-dim);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  margin-left: 0.5rem;
+}
+
+.btn-geolocate {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 1.5rem;
+  cursor: pointer;
+  z-index: 500;
+  box-shadow: 0 0 12px var(--accent-dim);
+}
+
+.btn-geolocate:hover {
+  box-shadow: 0 0 20px var(--accent-dim);
+}
+
+/* Панель добавления точки */
+.add-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 22rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 0 24px var(--accent-dim);
+  z-index: 1100;
+}
+
+.add-panel.hidden {
+  display: none;
+}
+
+.add-panel h3 {
+  margin: 0 0 1rem;
+  color: var(--accent);
+}
+
+.add-panel input {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--text-muted);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.add-panel input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-panel__coords {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.btn-add-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 500;
+  box-shadow: 0 0 12px var(--accent-dim);
+}
+
+/* Маркеры Leaflet — подкрашиваем под неон */
+.leaflet-popup-content-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 0 14px var(--accent-dim);
+}
+
+.leaflet-popup-tip {
+  background: var(--surface);
+}
+
+.leaflet-popup-content {
+  margin: 0.5rem 0.75rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}

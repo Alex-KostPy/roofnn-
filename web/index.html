@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RoofNN — Путеводитель по крышам Нижнего Новгорода</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/style.css" />
+  <!--
+    ВАЖНО ПРО NETLIFY/СТАТИКУ:
+    Если Mini App лежит на Netlify, а API (FastAPI) — на другом домене, укажите базовый URL API здесь.
+    Пример: window.ROOFNN_API_BASE = "https://roofnn-api.example.com";
+    Если оставить пустым, фронт будет обращаться к /api/* на этом же домене.
+  -->
+  <script>
+    window.ROOFNN_API_BASE = "";
+  </script>
+
+  <!-- Telegram Web App (initData). В Telegram-webview объект window.Telegram.WebApp будет доступен. -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Карточка выбранной точки: описание и кнопка «Открыть тутор» -->
+  <div id="spot-card" class="spot-card hidden">
+    <h2 id="spot-title" class="spot-card__title"></h2>
+    <p id="spot-coords" class="spot-card__coords"></p>
+    <button type="button" id="btn-open-tutor" class="btn btn--primary">
+      Открыть тутор
+    </button>
+    <p id="spot-error" class="spot-card__error hidden"></p>
+  </div>
+
+  <!-- Кнопка «Моё местоположение» -->
+  <button type="button" id="btn-geolocate" class="btn-geolocate" title="Моё местоположение">
+    📍
+  </button>
+
+  <!-- Форма добавления новой точки (по желанию можно вызвать из меню) -->
+  <div id="add-spot-panel" class="add-panel hidden">
+    <h3>Добавить точку</h3>
+    <input type="text" id="add-title" placeholder="Название" />
+    <input type="text" id="add-telegraph" placeholder="Ссылка на Telegraph" />
+    <p class="add-panel__coords">Координаты: <span id="add-coords">—</span></p>
+    <button type="button" id="btn-add-spot" class="btn btn--primary">Отправить на модерацию</button>
+    <button type="button" id="btn-close-add" class="btn btn--secondary">Закрыть</button>
+  </div>
+  <button type="button" id="btn-show-add" class="btn-add-toggle" title="Добавить точку">+</button>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/script.js"></script>
+</body>
+</html>
