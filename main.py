@@ -8,8 +8,8 @@ from pathlib import Path
 import httpx
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message, CallbackQuery, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 
 from database import init_db
 
@@ -86,18 +86,26 @@ async def callback_approve_spot(callback: CallbackQuery) -> None:
         await callback.answer("Сервер недоступен. Подождите и попробуйте снова.", show_alert=True)
 
 
-@dp.message(F.text.startswith("/add_balance"))
+@dp.message(Command("add_balance"))
 async def cmd_add_balance(message: Message) -> None:
     """Админ: пополнить баланс пользователю. Использование: /add_balance <tg_id> <сумма>"""
-    if message.from_user.id != ADMIN_ID:
-        return
     import re
-    m = re.match(r"^/add_balance\s+(\d+)\s+([\d.]+)\s*$", (message.text or "").strip())
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("Нет доступа. Эта команда только для администратора.")
+        return
+    text = (message.text or "").strip()
+    # Формат: /add_balance 123 50 или /add_balance 123, 50 (пробелы/запятая)
+    m = re.search(r"/add_balance(?:\s+|@\S+\s+)(\d+)\s*[,]?\s*([\d.,]+)\s*$", text)
     if not m:
-        await message.answer("Использование: /add_balance <tg_id> <сумма>")
+        await message.answer("Использование: /add_balance <tg_id> <сумма>\nНапример: /add_balance 123456789 100")
         return
     tg_id = int(m.group(1))
-    amount = float(m.group(2))
+    amount_str = m.group(2).replace(",", ".")
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        await message.answer("Сумма должна быть числом. Например: /add_balance 123456789 100")
+        return
     if amount <= 0 or amount > 100000:
         await message.answer("Сумма от 0.01 до 100000.")
         return
@@ -144,9 +152,26 @@ async def callback_reject_spot(callback: CallbackQuery) -> None:
         await callback.answer("Сервер недоступен. Подождите и попробуйте снова.", show_alert=True)
 
 
+@dp.message()
+async def any_other_message(message: Message) -> None:
+    """Любое сообщение, не попавшее в команды (текст, фото и т.д.) — подсказка."""
+    await message.answer("Используйте /start, чтобы открыть карту.")
+
+
+@dp.callback_query()
+async def any_other_callback(callback: CallbackQuery) -> None:
+    """Чужие callback (не approve/reject) — закрываем без ошибки."""
+    await callback.answer()
+
+
 async def main() -> None:
     """Запуск бота: инициализация БД и polling."""
     init_db()
+    # Регистрируем команды в меню бота (видны при вводе /)
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Начать / открыть карту"),
+        BotCommand(command="add_balance", description="Админ: пополнить баланс (tg_id сумма)"),
+    ])
     await dp.start_polling(bot)
 
 

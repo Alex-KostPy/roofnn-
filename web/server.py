@@ -35,6 +35,9 @@ BOT_TOKEN = (os.environ.get("BOT_TOKEN", "") or "").strip()
 ADMIN_ID = (os.environ.get("ADMIN_ID", "") or "").strip()
 SPOT_PRICE = 20
 
+# Варианты опасности на точке (выбор при добавлении)
+DANGER_CHOICES = ["камеры", "охрана", "бабки", "замок на клетке", "собаки", "другое"]
+
 app = FastAPI(title="RoofNN API", description="API для Mini App «Путеводитель по крышам НН»")
 
 app.add_middleware(
@@ -115,6 +118,7 @@ def list_spots(db: Session = Depends(get_db)):
             lat=s.lat,
             lon=s.lon,
             author_username=getattr(s, "author_username", None) or None,
+            danger=getattr(s, "danger", None) or None,
         )
         for s in spots
     ]
@@ -204,8 +208,8 @@ def buy_spot(body: BuySpotRequest, db: Session = Depends(get_db)):
     if not spot:
         raise HTTPException(status_code=404, detail="Точка не найдена")
 
-    # Уже есть доступ (купил раньше или автор) — отдаём ссылку без списания
-    if spot.author_id == tg_id:
+    # Только автор или тот, кто уже купил, получают ссылку без списания
+    if spot.author_id is not None and int(spot.author_id) == int(tg_id):
         _grant_spot_access(db, tg_id, spot.id)
         db.commit()
         return BuySpotResponse(telegraph_url=spot.telegraph_url)
@@ -214,14 +218,16 @@ def buy_spot(body: BuySpotRequest, db: Session = Depends(get_db)):
         return BuySpotResponse(telegraph_url=spot.telegraph_url)
 
     user = _ensure_user_from_init_data(db, user_data)
+    free_attempts = user.free_attempts or 0
+    balance = user.balance or 0
 
-    if user.free_attempts and user.free_attempts > 0:
-        user.free_attempts -= 1
+    if free_attempts > 0:
+        user.free_attempts = free_attempts - 1
         _grant_spot_access(db, tg_id, spot.id)
         db.commit()
         return BuySpotResponse(telegraph_url=spot.telegraph_url)
-    if (user.balance or 0) >= SPOT_PRICE:
-        user.balance -= SPOT_PRICE
+    if balance >= SPOT_PRICE:
+        user.balance = balance - SPOT_PRICE
         _grant_spot_access(db, tg_id, spot.id)
         db.commit()
         return BuySpotResponse(telegraph_url=spot.telegraph_url)
@@ -279,6 +285,10 @@ def add_spot(body: AddSpotRequest, db: Session = Depends(get_db)):
             detail="Укажите ссылку на туториал (https), например Telegraph, Imgur или другой сервис.",
         )
 
+    danger = (body.danger or "").strip() or None
+    if danger and danger not in DANGER_CHOICES:
+        danger = "другое"
+
     spot = Spot(
         title=title,
         lat=body.lat,
@@ -287,6 +297,7 @@ def add_spot(body: AddSpotRequest, db: Session = Depends(get_db)):
         price=SPOT_PRICE,
         author_id=tg_id,
         author_username=author_display,
+        danger=danger,
         is_active=False,
     )
     db.add(spot)
@@ -295,12 +306,14 @@ def add_spot(body: AddSpotRequest, db: Session = Depends(get_db)):
 
     # Уведомление админу в боте с кнопками
     if BOT_TOKEN and ADMIN_ID:
+        danger_line = f"\nОпасность: {spot.danger}" if getattr(spot, "danger", None) else ""
         text = (
             f"Новая точка на модерацию:\n"
             f"ID: {spot.id}\n"
             f"Название: {spot.title}\n"
             f"Координаты: {spot.lat}, {spot.lon}\n"
             f"Туториал: {spot.telegraph_url}"
+            f"{danger_line}"
         )
         keyboard = {
             "inline_keyboard": [
@@ -349,13 +362,16 @@ def admin_approve_spot(
     if not spot:
         raise HTTPException(status_code=404, detail="Точка не найдена")
     spot.is_active = True
-    if spot.author_id:
-        user = db.query(User).filter(User.tg_id == spot.author_id).first()
+    author_tg_id = spot.author_id
+    if author_tg_id is not None:
+        author_tg_id = int(author_tg_id)
+        user = db.query(User).filter(User.tg_id == author_tg_id).first()
         if not user:
-            user = User(tg_id=spot.author_id)
+            user = User(tg_id=author_tg_id)
             db.add(user)
             db.flush()
         user.balance = (user.balance or 0) + 40
+        db.flush()
     db.commit()
     return {"ok": True, "message": "Одобрено"}
 

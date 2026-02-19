@@ -34,12 +34,14 @@
   const $spotCard = document.getElementById("spot-card");
   const $spotTitle = document.getElementById("spot-title");
   const $spotAuthor = document.getElementById("spot-author");
+  const $spotDanger = document.getElementById("spot-danger");
   const $spotCoords = document.getElementById("spot-coords");
   const $btnOpenTutor = document.getElementById("btn-open-tutor");
   const $spotError = document.getElementById("spot-error");
   const $btnGeolocate = document.getElementById("btn-geolocate");
   const $addTitle = document.getElementById("add-title");
   const $addTelegraph = document.getElementById("add-telegraph");
+  const $addDanger = document.getElementById("add-danger");
   const $addCoords = document.getElementById("add-coords");
   const $btnAddSpot = document.getElementById("btn-add-spot");
   const $btnCloseAdd = document.getElementById("btn-close-add");
@@ -127,6 +129,10 @@
     $spotTitle.textContent = spot.title;
     $spotAuthor.textContent = spot.author_username ? "Туториал от " + spot.author_username : "";
     $spotAuthor.classList.toggle("hidden", !spot.author_username);
+    if ($spotDanger) {
+      $spotDanger.textContent = spot.danger ? "Опасность: " + spot.danger : "";
+      $spotDanger.classList.toggle("hidden", !spot.danger);
+    }
     $spotCoords.textContent = "Координаты: " + spot.lat.toFixed(5) + ", " + spot.lon.toFixed(5);
     $btnOpenTutor.dataset.spotId = String(id);
     if (boughtSpots[id]) {
@@ -183,9 +189,11 @@
       li.className = "spot-list__item";
       const isMine = isMySpot(spot.id);
       const author = spot.author_username ? " · " + spot.author_username : "";
+      const danger = spot.danger ? " · " + spot.danger : "";
       li.innerHTML =
         "<span class=\"spot-list__title\">" + escapeHtml(spot.title) + "</span>" +
         (author ? "<span class=\"spot-list__author\">" + escapeHtml(spot.author_username) + "</span>" : "") +
+        (danger ? "<span class=\"spot-list__danger\">" + escapeHtml(spot.danger) + "</span>" : "") +
         (isMine ? "<span class=\"spot-list__badge\">Ваш</span>" : "");
       const btn = document.createElement("button");
       btn.type = "button";
@@ -271,16 +279,11 @@
         return;
       }
       if (!telegraph) {
-        $addSpotError.textContent = "Вставьте ссылку на туториал в Telegraph.";
+        $addSpotError.textContent = "Вставьте ссылку на туториал (Telegraph, Imgur или другую).";
         $addSpotError.classList.remove("hidden");
         return;
       }
       if (!telegraph.startsWith("http")) telegraph = "https://" + telegraph;
-      if (!telegraph.includes("telegra.ph")) {
-        $addSpotError.textContent = "Ссылка должна вести на telegra.ph (Telegraph).";
-        $addSpotError.classList.remove("hidden");
-        return;
-      }
       if (!addSpotLatLng) {
         $addSpotError.textContent = "Выберите место на карте: «Карта» → клик по карте → снова «Добавить».";
         $addSpotError.classList.remove("hidden");
@@ -295,6 +298,7 @@
 
       $btnAddSpot.disabled = true;
       try {
+        const dangerVal = $addDanger && $addDanger.value ? $addDanger.value : null;
         const res = await fetch(apiUrl("/api/add_spot"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -303,6 +307,7 @@
             lat: addSpotLatLng.lat,
             lon: addSpotLatLng.lng,
             telegraph_url: telegraph,
+            danger: dangerVal || undefined,
             init_data: initData,
           }),
         });
@@ -311,6 +316,7 @@
         showToast("Точка отправлена на модерацию.");
         $addTitle.value = "";
         $addTelegraph.value = "";
+        if ($addDanger) $addDanger.value = "";
         $addCoords.textContent = "— выберите место на карте";
         addSpotLatLng = null;
         showView("map");

@@ -52,6 +52,16 @@
         <input type="text" id="add-title" class="input" placeholder="Например: Крыша на ул. Рождественская" maxlength="200" />
         <label class="label">Ссылка на туториал</label>
         <input type="url" id="add-telegraph" class="input" placeholder="https://telegra.ph/... или https://imgur.com/..." />
+        <label class="label">Опасность на точке</label>
+        <select id="add-danger" class="input">
+          <option value="">— не выбрано —</option>
+          <option value="камеры">Камеры</option>
+          <option value="охрана">Охрана</option>
+          <option value="бабки">Бабки</option>
+          <option value="замок на клетке">Замок на клетке</option>
+          <option value="собаки">Собаки</option>
+          <option value="другое">Другое</option>
+        </select>
         <p class="add-section__coords">Координаты: <span id="add-coords">— выберите место на карте</span></p>
         <p class="add-section__coords-hint">Переключитесь на «Карта», нажмите на карту в нужном месте, затем снова «Добавить».</p>
         <div class="add-section__actions">
@@ -65,6 +75,7 @@
     <div id="spot-card" class="spot-card hidden">
       <h2 id="spot-title" class="spot-card__title"></h2>
       <p id="spot-author" class="spot-card__author"></p>
+      <p id="spot-danger" class="spot-card__danger"></p>
       <p id="spot-coords" class="spot-card__coords"></p>
       <button type="button" id="btn-open-tutor" class="btn btn--primary btn--block">
         Открыть туториал на Telegraph

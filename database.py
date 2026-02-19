@@ -55,6 +55,7 @@ class Spot(Base):
     price: Mapped[int] = mapped_column(default=20)  # руб за просмотр тутора
     author_id: Mapped[Optional[int]] = mapped_column(nullable=True)  # tg_id автора (не FK)
     author_username: Mapped[Optional[str]] = mapped_column(nullable=True)  # ник для отображения
+    danger: Mapped[Optional[str]] = mapped_column(nullable=True)  # тип опасности: камеры, охрана, бабки, замок на клетке, собаки, другое
     is_active: Mapped[bool] = mapped_column(default=False)
 
 
@@ -82,6 +83,7 @@ def init_db() -> None:
         ("users", "first_name", "TEXT"),
         ("users", "last_free_refill", "TIMESTAMP"),
         ("spots", "author_username", "TEXT"),
+        ("spots", "danger", "TEXT"),
     ]:
         try:
             with engine.connect() as conn:

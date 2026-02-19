@@ -9,12 +9,13 @@ from pydantic import BaseModel, Field
 # --- Ответы API ---
 
 class SpotPublic(BaseModel):
-    """Точка для карты: id, название, координаты, автор (ник)."""
+    """Точка для карты: id, название, координаты, автор, опасность."""
     id: int
     title: str
     lat: float
     lon: float
     author_username: Optional[str] = None
+    danger: Optional[str] = None
 
 
 class MeResponse(BaseModel):
@@ -44,6 +45,7 @@ class AddSpotRequest(BaseModel):
     lat: float
     lon: float
     telegraph_url: str
+    danger: Optional[str] = None  # камеры, охрана, бабки, замок на клетке, собаки, другое
     init_data: str = Field(..., description="Telegram WebApp initData")
 
 
