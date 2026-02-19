@@ -86,42 +86,58 @@ async def callback_approve_spot(callback: CallbackQuery) -> None:
         await callback.answer("Сервер недоступен. Подождите и попробуйте снова.", show_alert=True)
 
 
-@dp.message(Command("add_balance"))
+@dp.message(F.text.startswith("/add_balance"))
 async def cmd_add_balance(message: Message) -> None:
     """Админ: пополнить баланс пользователю. Использование: /add_balance <tg_id> <сумма>"""
     import re
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("Нет доступа. Эта команда только для администратора.")
-        return
-    text = (message.text or "").strip()
-    # Формат: /add_balance 123 50 или /add_balance 123, 50 (пробелы/запятая)
-    m = re.search(r"/add_balance(?:\s+|@\S+\s+)(\d+)\s*[,]?\s*([\d.,]+)\s*$", text)
-    if not m:
-        await message.answer("Использование: /add_balance <tg_id> <сумма>\nНапример: /add_balance 123456789 100")
-        return
-    tg_id = int(m.group(1))
-    amount_str = m.group(2).replace(",", ".")
     try:
-        amount = float(amount_str)
-    except ValueError:
-        await message.answer("Сумма должна быть числом. Например: /add_balance 123456789 100")
-        return
-    if amount <= 0 or amount > 100000:
-        await message.answer("Сумма от 0.01 до 100000.")
-        return
-    url = f"{API_BASE}/api/admin/add_balance"
-    headers = {"Authorization": f"Bearer {BOT_TOKEN}", "Content-Type": "application/json"}
-    try:
+        logger.info("add_balance received: from_id=%s admin_id=%s text=%r", message.from_user.id if message.from_user else None, ADMIN_ID, (message.text or "")[:80])
+        if not message.text:
+            await message.answer("Отправьте команду текстом: /add_balance <tg_id> <сумма>")
+            return
+        if message.from_user.id != ADMIN_ID:
+            await message.answer("Нет доступа. Эта команда только для администратора.")
+            return
+        text = message.text.strip()
+        # Формат: /add_balance 123 50 или /add_balance 123, 50 (пробелы/запятая); допускаем @botname после команды
+        m = re.search(r"/add_balance(?:\s+|@\S+\s+)(\d+)\s*[,]?\s*([\d.,]+)\s*$", text)
+        if not m:
+            await message.answer("Использование: /add_balance <tg_id> <сумма>\nНапример: /add_balance 123456789 100")
+            return
+        tg_id = int(m.group(1))
+        amount_str = m.group(2).replace(",", ".")
+        try:
+            amount = float(amount_str)
+        except ValueError:
+            await message.answer("Сумма должна быть числом. Например: /add_balance 123456789 100")
+            return
+        if amount <= 0 or amount > 100000:
+            await message.answer("Сумма от 0.01 до 100000.")
+            return
+        url = f"{API_BASE}/api/admin/add_balance"
+        headers = {"Authorization": f"Bearer {BOT_TOKEN}", "Content-Type": "application/json"}
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.post(url, json={"tg_id": tg_id, "amount": amount}, headers=headers)
+        if r.status_code == 404:
+            await message.answer("Эндпоинт пополнения не найден (404). Задеплойте бэкенд на Render — в репозитории есть /api/admin/add_balance.")
+            return
         if r.status_code >= 400:
-            await message.answer("Ошибка API: " + (r.json().get("detail", "неизвестно") if r.headers.get("content-type", "").startswith("application/json") else str(r.status_code)))
+            detail = "неизвестно"
+            if (r.headers.get("content-type") or "").startswith("application/json"):
+                try:
+                    detail = r.json().get("detail", str(r.status_code))
+                except Exception:
+                    detail = str(r.status_code)
+            await message.answer("Ошибка API: " + detail)
             return
         data = r.json()
         await message.answer(f"✅ Пользователю {tg_id} начислено {amount} ₽. Новый баланс: {data.get('balance', '?')} ₽.")
     except Exception as e:
-        logger.exception("add_balance failed")
-        await message.answer("Сервер недоступен.")
+        logger.exception("add_balance failed: %s", e)
+        try:
+            await message.answer("Ошибка при пополнении. Проверьте логи бота.")
+        except Exception:
+            pass
 
 
 @dp.callback_query(F.data.startswith("reject_"))
