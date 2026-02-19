@@ -20,6 +20,7 @@
   let map = null;
   let addSpotLatLng = null;
   let spots = [];
+  let openedSpots = [];
   let profile = { balance: 0, free_attempts: 0, my_spot_ids: [] };
   const boughtSpots = {};
 
@@ -98,6 +99,24 @@
     }
   }
 
+  async function loadOpenedSpots() {
+    const initData = getInitData();
+    if (!initData) return [];
+    try {
+      const res = await fetch(apiUrl("/api/opened_spots"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ init_data: initData }),
+      });
+      if (!res.ok) return [];
+      openedSpots = await res.json();
+      return openedSpots;
+    } catch (e) {
+      console.error("loadOpenedSpots", e);
+      return [];
+    }
+  }
+
   async function buySpot(spotId) {
     const initData = getInitData();
     const res = await fetch(apiUrl("/api/buy_spot"), {
@@ -158,6 +177,7 @@
       boughtSpots[spotId] = url;
       $btnOpenTutor.textContent = "Открыть туториал на Telegraph";
       window.open(url, "_blank");
+      loadOpenedSpots().then(() => renderList());
     } catch (e) {
       $spotError.textContent = e.message || "Ошибка";
       $spotError.classList.remove("hidden");
@@ -184,7 +204,7 @@
   function renderList() {
     if (!$spotList) return;
     $spotList.innerHTML = "";
-    spots.forEach((spot) => {
+    openedSpots.forEach((spot) => {
       const li = document.createElement("li");
       li.className = "spot-list__item";
       const isMine = isMySpot(spot.id);
@@ -328,7 +348,7 @@
       $btnAddSpot.disabled = false;
     });
 
-    Promise.all([loadProfile(), loadSpots()]).then(() => {
+    Promise.all([loadProfile(), loadSpots(), loadOpenedSpots()]).then(() => {
       renderMarkers();
       renderList();
       $profileBalance.textContent = profile.balance;

@@ -104,24 +104,43 @@ def health():
     return {"status": "ok"}
 
 
+def _spot_to_public(s: Spot) -> SpotPublic:
+    return SpotPublic(
+        id=s.id,
+        title=s.title,
+        lat=s.lat,
+        lon=s.lon,
+        author_username=getattr(s, "author_username", None) or None,
+        danger=getattr(s, "danger", None) or None,
+    )
+
+
 @app.get("/api/spots", response_model=list[SpotPublic])
 def list_spots(db: Session = Depends(get_db)):
-    """
-    Список активных точек для карты и списка.
-    С полем author_username (ник того, кто добавил тутор).
-    """
+    """Все активные точки (для карты — можно выбирать и покупать)."""
     spots = db.query(Spot).filter(Spot.is_active == True).all()
-    return [
-        SpotPublic(
-            id=s.id,
-            title=s.title,
-            lat=s.lat,
-            lon=s.lon,
-            author_username=getattr(s, "author_username", None) or None,
-            danger=getattr(s, "danger", None) or None,
-        )
-        for s in spots
-    ]
+    return [_spot_to_public(s) for s in spots]
+
+
+@app.post("/api/opened_spots", response_model=list[SpotPublic])
+def list_opened_spots(body: MeRequest, db: Session = Depends(get_db)):
+    """Только точки, которые пользователь уже открыл (автор или купил доступ). Для вкладки «Список»."""
+    init_data = (body.init_data or "").strip()
+    if not validate_init_data(init_data, BOT_TOKEN):
+        raise HTTPException(status_code=401, detail="Неверная авторизация")
+    user_data = get_tg_user_from_init_data(init_data)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+    tg_id = user_data["id"]
+    # ID точек, где пользователь автор
+    author_spot_ids = {s.id for s in db.query(Spot.id).filter(Spot.author_id == tg_id, Spot.is_active == True).all()}
+    # ID точек, которые пользователь купил
+    bought_spot_ids = {a.spot_id for a in db.query(SpotAccess.spot_id).filter(SpotAccess.tg_id == tg_id).all()}
+    open_ids = author_spot_ids | bought_spot_ids
+    if not open_ids:
+        return []
+    spots = db.query(Spot).filter(Spot.id.in_(open_ids), Spot.is_active == True).all()
+    return [_spot_to_public(s) for s in spots]
 
 
 def _ensure_user_from_init_data(db: Session, user_data: dict) -> User:
@@ -143,11 +162,10 @@ def _ensure_user_from_init_data(db: Session, user_data: dict) -> User:
 
 
 def _apply_weekly_refill(user: User) -> None:
-    """Раз в 7 дней начислять +2 бесплатных попытки."""
+    """Раз в 7 дней начислять 2 бесплатных попытки (всего 2, не больше). При первом заходе не дублируем — у новых уже 2."""
     now = datetime.now(timezone.utc)
     last = getattr(user, "last_free_refill", None)
     if last is None:
-        user.free_attempts = (user.free_attempts or 0) + 2
         user.last_free_refill = now
         return
     try:
@@ -155,7 +173,7 @@ def _apply_weekly_refill(user: User) -> None:
             last = last.replace(tzinfo=timezone.utc)
         delta = (now - last).total_seconds()
         if delta >= 7 * 24 * 3600:  # 7 дней
-            user.free_attempts = (user.free_attempts or 0) + 2
+            user.free_attempts = 2
             user.last_free_refill = now
     except Exception:
         pass
