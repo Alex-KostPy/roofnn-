@@ -223,7 +223,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn btn--small btn--primary";
-      btn.textContent = isMine ? "Открыть" : "Открыть (20 ₽)";
+      btn.textContent = "Открыть";
       btn.addEventListener("click", () => selectSpot(spot));
       li.appendChild(btn);
       $spotList.appendChild(li);
