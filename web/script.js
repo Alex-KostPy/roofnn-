@@ -139,9 +139,14 @@
     return profile.my_spot_ids && profile.my_spot_ids.indexOf(spotId) !== -1;
   }
 
+  function isOpenedSpot(spotId) {
+    return openedSpots.some((s) => s.id === spotId);
+  }
+
   function selectSpot(spot) {
     const id = spot.id;
     const isMine = isMySpot(id);
+    const alreadyOpened = boughtSpots[id] || isOpenedSpot(id);
     $spotCard.classList.remove("hidden");
     $spotError.classList.add("hidden");
     $spotError.textContent = "";
@@ -154,8 +159,8 @@
     }
     $spotCoords.textContent = "Координаты: " + spot.lat.toFixed(5) + ", " + spot.lon.toFixed(5);
     $btnOpenTutor.dataset.spotId = String(id);
-    if (boughtSpots[id]) {
-      $btnOpenTutor.textContent = "Открыть туториал на Telegraph";
+    if (alreadyOpened) {
+      $btnOpenTutor.textContent = "Открыть";
     } else if (isMine) {
       $btnOpenTutor.textContent = "Открыть свой тутор (бесплатно)";
     } else {
